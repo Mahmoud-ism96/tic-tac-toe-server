@@ -133,7 +133,7 @@ public class FXMLDocumentBase extends AnchorPane {
             public void handle(ActionEvent event) {
                 toggle_isSelected();
                 try {
-                    serverSocket = new ServerSocket(1234);
+                    serverSocket = new ServerSocket(5005);
                     new Thread() {
                         @Override
                         public void run() {
@@ -177,50 +177,4 @@ public class FXMLDocumentBase extends AnchorPane {
         }
     }
 
-}
-
-class RequestHandler extends Thread {
-
-    DataInputStream d;
-    PrintStream p;
-    static Vector<RequestHandler> clients = new Vector<RequestHandler>();
-    Socket client;
-
-    public RequestHandler(Socket s) throws IOException {
-        d = new DataInputStream(s.getInputStream());
-        p = new PrintStream(s.getOutputStream());
-        RequestHandler.clients.add(this);
-        client = s;
-        start();
-    }
-
-    public void run() {
-        try {
-            while (true) {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
-                String jsonString = reader.readLine();
-                Gson gson = new Gson();
-                JsonElement jsonElement = gson.fromJson(jsonString, JsonElement.class);
-                JsonObject jsonObject = jsonElement.getAsJsonObject();
-
-                handleRequset(jsonObject);
-
-            }
-
-        } catch (IOException ex) {
-            Logger.getLogger(RequestHandler.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-
-    private void handleRequset(JsonObject obj) {
-
-        JsonElement signInElement = obj.get("data");
-        JsonElement requestElement = obj.get("request");
-        JsonObject signInObject = signInElement.getAsJsonObject();
-        JsonObject requestObject = requestElement.getAsJsonObject();
-        String userName = signInObject.get("username").getAsString();
-        String password = signInObject.get("password").getAsString();
-        String request = requestObject.get("request").getAsString();
-
-    }
 }
