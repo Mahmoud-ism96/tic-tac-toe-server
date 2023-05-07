@@ -1,6 +1,18 @@
 package tictactoeserver;
 
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.sql.SQLException;
+import java.util.Vector;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.chart.StackedBarChart;
@@ -12,6 +24,9 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.text.Text;
+import jdk.nashorn.internal.parser.JSONParser;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 
 public  class FXMLDocumentBase extends AnchorPane {
 
@@ -28,6 +43,10 @@ public  class FXMLDocumentBase extends AnchorPane {
     XYChart.Series series2;
     XYChart.Series series3;
     
+    ServerSocket serverSocket ;
+    Socket client;
+    DataInputStream dis;
+    PrintStream ps;
     public FXMLDocumentBase() {
 
         background = new ImageView();
@@ -37,6 +56,7 @@ public  class FXMLDocumentBase extends AnchorPane {
         barChart = new StackedBarChart(categoryAxis, numberAxis);
         txt_off = new Text();
         
+       
         img_background=new Image("/images/background.jpg");
         
         img = new Image("/images/off.png");
@@ -119,10 +139,28 @@ public  class FXMLDocumentBase extends AnchorPane {
             @Override
             public void handle(ActionEvent event) {
                toggle_isSelected();
+                try {
+                    serverSocket= new ServerSocket(1234);
+                    new Thread(){
+                    @Override
+                    public void run(){
+                            
+                    while(true){
+                        try {
+                            client=serverSocket.accept();
+                            new RequestHandler(client);
+                        } catch (IOException ex) {
+                            Logger.getLogger(FXMLDocumentBase.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
+                   }
+                }.start();
+                } catch (IOException ex) {
+                    Logger.getLogger(FXMLDocumentBase.class.getName()).log(Level.SEVERE, null, ex);
+                }
+
             }
         });
-        
-
     }
     public void toggle_isSelected(){
         if(toggle_btn.isSelected()){
@@ -133,6 +171,7 @@ public  class FXMLDocumentBase extends AnchorPane {
                 toggle_btn.setGraphic(view);
                 txt_off.setVisible(false);
                 barChart.setVisible(true);
+                
         }else{
              img=new Image("/images/off.png");
                 view=new ImageView(img);
@@ -146,3 +185,53 @@ public  class FXMLDocumentBase extends AnchorPane {
 
     
 }
+
+
+class RequestHandler extends Thread{
+    DataInputStream d;
+    PrintStream p;
+    static Vector<RequestHandler> clients=new Vector<RequestHandler>();
+    
+    public RequestHandler(Socket s) throws IOException{
+        d= new DataInputStream(s.getInputStream());
+        p=new PrintStream(s.getOutputStream());
+        RequestHandler.clients.add(this);
+        start();
+    }
+    public void run(){
+        try {
+            while(true){
+              String jsonString=d.readLine();
+              Gson gson = new Gson();
+                JsonElement jsonElement = gson.fromJson(jsonString, JsonElement.class);
+                JsonObject jsonObject = jsonElement.getAsJsonObject();
+                
+                handleRequset(jsonObject);
+                
+               
+
+            }
+            
+        } catch (IOException ex) {
+            Logger.getLogger(RequestHandler.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        }
+
+    private void handleRequset(JsonObject obj) {
+        
+             JsonElement signInElement = obj.get("data");
+             JsonElement requestElement = obj.get("request");
+             JsonObject signInObject = signInElement.getAsJsonObject();
+             JsonObject requestObject = requestElement.getAsJsonObject();
+             String userName = signInObject.get("username").getAsString();
+             String password = signInObject.get("password").getAsString();
+             String request = requestObject.get("request").getAsString();
+                     
+            
+        }
+    }
+        
+    
+    
+    
+
