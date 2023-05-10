@@ -12,10 +12,7 @@ import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -80,73 +77,31 @@ public class RequestHandler  extends Thread {
         switch (request) {
             case "SIGNIN": {
                 signInRequest(jsonObject);
+                
             }
         }
 
     }
 
-private void signInRequest( JsonObject jsonObject) throws SQLException {
-    JsonElement signInElement = jsonObject.get("data");
-    JsonObject signInObject = signInElement.getAsJsonObject();
-    String userName = signInObject.get("username").getAsString();
-    String password = signInObject.get("password").getAsString();
-    Connection connection = null;
-    
-    try {
-        connection = DriverManager.getConnection("jdbc:derby://localhost:1527/GameDataBase", "root", "root");
-
-        String query = "SELECT * FROM Player WHERE DISPLAY_NAME = ? AND password = ? ";
-        PreparedStatement statement = connection.prepareStatement(query);
-        statement.setString(1, userName);
-        statement.setString(2, password);
-
-        ResultSet resultSet = statement.executeQuery();
-
-        if (resultSet.next()) {
-            System.out.println("username " + userName);
-            System.out.println("password " + password);
-            
-            String displayName = resultSet.getString("DISPLAY_NAME");
-            int totalScore = resultSet.getInt("SCORE");
-            int UserId = resultSet.getInt("USER_ID");
-
-            
-            JsonObject response = new JsonObject();
-            response.addProperty("response", "success");
-            response.addProperty("displayName", displayName);
-            response.addProperty("totalScore", totalScore);
-            response.addProperty("userId", UserId);
-
-            
-            sendResponseToClient(response);
-            System.out.println("User exists in the database");
-        } else {
-            JsonObject response = new JsonObject();
-            response.addProperty("response", "failure");
-            System.out.println("User does not exist in the database");
-        }
-    } catch (Exception ex) {
+    private void signInRequest(JsonObject jsonObject) throws SQLException {
+        JsonElement signInElement = jsonObject.get("data");
+        JsonObject signInObject = signInElement.getAsJsonObject();
+        String userName = signInObject.get("username").getAsString();
+        String password = signInObject.get("password").getAsString();
         
-        System.out.println(ex.getLocalizedMessage());
-    } finally {
-        if (connection != null) {
-            try {
-                connection.close();
-            } catch (SQLException ex) {
-                System.out.println(ex.getMessage());
-            }
-        }
-    }
+        DataAccessLayer.getInstance().getPlayerByID(userName, password);
+     
 }
-
-private void sendResponseToClient(JsonObject message) {
-    try {
-        printStream.println(message.toString());
-    } catch (Exception ex) {
-        System.out.println("Error sending message: " + ex.getMessage());
-    }
+    private void signUpRequest(JsonObject jsonObject) throws SQLException {
+        JsonElement signUpElement = jsonObject.get("data");
+        JsonObject signUpObject = signUpElement.getAsJsonObject();
+        String userName = signUpObject.get("username").getAsString();
+        String displayName=signUpObject.get("displayname").getAsString();
+        String password = signUpObject.get("password").getAsString();
+        
+        DataAccessLayer.getInstance().insert(userName,displayName,password);
+     
 }
-    
 }
 
 
