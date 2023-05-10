@@ -5,7 +5,6 @@
  */
 package tictactoeserver;
 
-
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -76,12 +75,9 @@ public class RequestHandler  extends Thread {
         String request = requestObject.get("request").getAsString();
 
         switch (request) {
-            case "SIGNIN": 
+            case "SIGNIN": {
                 signInRequest(jsonObject);
-                break;
-            case "SIGNUP":
-                signUpRequest(jsonObject);
-                break;
+            }
         }
 
     }
@@ -94,9 +90,9 @@ public class RequestHandler  extends Thread {
 
          try {
     Connection connection = DriverManager.
-            getConnection("jdbc:derby://localhost:1527/Player", "Root", "root");
+            getConnection("jdbc:derby://localhost:1527/GameDataBase", "root", "root");
 
-        String query = "SELECT * FROM Player WHERE user_id = ? AND password = ?";
+        String query = "SELECT * FROM users WHERE username = ? AND password = ?";
         PreparedStatement statement = connection.prepareStatement(query);
         statement.setString(1, userName);
         statement.setString(2, password);
@@ -121,41 +117,6 @@ public class RequestHandler  extends Thread {
     System.out.println(ex.getLocalizedMessage());
 
     }
-}
-
-    private void signUpRequest(JsonObject jsonObject) {
-            
-             JsonElement signUpElement = jsonObject.get("data");
-             JsonObject signUpObject = signUpElement.getAsJsonObject();
-             String userName = signUpObject.get("username").getAsString();
-             String displayname=signUpObject.get("displayname").getAsString();
-             String password = signUpObject.get("password").getAsString();
-             
-            try {
-                int result=0;
-                Connection connection = DriverManager.
-                  getConnection("jdbc:derby://localhost:1527/Player", "Root", "root");
-
-              String query = "INSERT INTO PLAYER (user_id,Display_name,password)" +"VALUES (?,?,?)";
-              PreparedStatement statement = connection.prepareStatement(query);
-              statement.setString(1, userName);
-              statement.setString(2, displayname);
-              statement.setString(3, password);
-
-             result = statement.executeUpdate();
-
-
-              if (result!=0) {
-
-                  System.out.println("insert in the database");
-              } else {
-
-                  System.out.println("fail to insert in the database");
-              }
-
-          }   catch (SQLException ex) {
-                  Logger.getLogger(RequestHandler.class.getName()).log(Level.SEVERE, null, ex);
-              }
 }
 }
 
