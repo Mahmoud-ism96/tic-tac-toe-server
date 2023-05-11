@@ -88,7 +88,7 @@ public final class DataAccessLayer {
 
         playerData.add("request", requestData);
         playerData.add("response", responseData);
-
+        System.out.println("Player Logedin");
         return playerData;
     }
 
