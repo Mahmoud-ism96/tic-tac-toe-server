@@ -1,5 +1,6 @@
 package tictactoeserver;
 
+import com.google.gson.JsonObject;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -26,19 +27,41 @@ public final class DataAccessLayer {
         return instance;
     }
 
-    public int insert(String userName, String displayName, String password) throws SQLException {
+    public JsonObject insert(String userName, String displayName, String password) throws SQLException {
 
         int result = 0;
+        JsonObject playerData = new JsonObject();
         PreparedStatement preStatement = databaseConnection.prepareStatement("INSERT INTO PLAYER (user_id,Display_name,password)" + "VALUES (?,?,?)");
         preStatement.setString(1, userName);
         preStatement.setString(2, displayName);
         preStatement.setString(3, password);
         result = preStatement.executeUpdate();
-        return result;
+
+        JsonObject signinObject = new JsonObject();
+        JsonObject requestData = new JsonObject();
+        JsonObject responseData = new JsonObject();
+
+        if (result != 0) {
+            responseData.addProperty("response", "success");
+            signinObject.addProperty("displayName", displayName);
+            signinObject.addProperty("totalScore", 0);
+            signinObject.addProperty("userId", userName);
+            playerData.add("data", signinObject);
+        } else {
+            responseData.addProperty("response", "fail");
+        }
+
+        requestData.addProperty("request", "SIGNUP");
+
+        playerData.add("request", requestData);
+        playerData.add("response", responseData);
+
+        return playerData;
     }
 
-    public boolean getPlayerByID(String userName, String password) throws SQLException {
+    public JsonObject getPlayerByID(String userName, String password) throws SQLException {
         boolean result;
+        JsonObject playerData = new JsonObject();
         PreparedStatement preStatement = databaseConnection.prepareStatement("SELECT * FROM Player WHERE user_id = ? AND password = ?");
         preStatement.setString(1, userName);
         preStatement.setString(2, password);
@@ -46,9 +69,27 @@ public final class DataAccessLayer {
         ResultSet rSet = preStatement.executeQuery();
 
         result = rSet.next();
-        /*String name = rSet.getString("DISPLAY_NAME");
-        String email = rSet.getString("USER_ID");*/
-        return result;
+
+        JsonObject signInObject = new JsonObject();
+        JsonObject requestData = new JsonObject();
+        JsonObject responseData = new JsonObject();
+
+        if (result) {
+            responseData.addProperty("response", "success");
+            signInObject.addProperty("displayName", rSet.getString(2));
+            signInObject.addProperty("totalScore", rSet.getInt(5));
+            signInObject.addProperty("userId", userName);
+            playerData.add("data", signInObject);
+        } else {
+            responseData.addProperty("response", "fail");
+        }
+
+        requestData.addProperty("request", "SIGNIN");
+
+        playerData.add("request", requestData);
+        playerData.add("response", responseData);
+
+        return playerData;
     }
 
     /*public boolean checkPlayerExist(String email) throws SQLException {
@@ -62,18 +103,14 @@ public final class DataAccessLayer {
 
         return isExist;
     }*/
-
     /**
      *
-     * @return
-     * @throws SQLException
+     * @return @throws SQLException
      */
-
-
     public int getAllplayerList() throws SQLException {
-    
+
         PreparedStatement preStatement = databaseConnection.prepareStatement("SELECT * FROM player");
-        int  userCount=0;
+        int userCount = 0;
         ResultSet rSet = preStatement.executeQuery();
 
         while (rSet.next()) {
@@ -106,7 +143,7 @@ public final class DataAccessLayer {
         return playerList;
     }*/
 
-    /*public int changePlayStatus(Player player) throws SQLException {
+ /*public int changePlayStatus(Player player) throws SQLException {
         int result = 0;
         preStatement preStatement = databaseConnection.prepareStatement("UPDATE player SET ISPLAYING = ? WHERE PLAYERID = ?");
         preStatement.setBoolean(1, !player.isIsPlaying());
