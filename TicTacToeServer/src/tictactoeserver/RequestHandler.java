@@ -38,13 +38,18 @@ public class RequestHandler extends Thread {
     private String clientName;
     static Vector<RequestHandler> clients = new Vector<RequestHandler>();
 
-    public RequestHandler(Socket newClientSocket) throws IOException {
-        inputStream = new DataInputStream(newClientSocket.getInputStream());
-        bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-        printStream = new PrintStream(newClientSocket.getOutputStream());
-        clientName = newClientSocket.getInetAddress().toString();
-        RequestHandler.clients.add(this);
-        start();
+    public RequestHandler(Socket newClientSocket) {
+        try {
+            inputStream = new DataInputStream(newClientSocket.getInputStream());
+            bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+            printStream = new PrintStream(newClientSocket.getOutputStream());
+            clientName = newClientSocket.getInetAddress().toString();
+            RequestHandler.clients.add(this);
+            start();
+        } catch (IOException ex) {
+            Logger.getLogger(RequestHandler.class.getName()).log(Level.SEVERE, null, ex);
+            closeConnection();
+        }
     }
 
     public void run() {
@@ -65,8 +70,7 @@ public class RequestHandler extends Thread {
                     }
                 }
             } catch (IOException ex) {
-                Logger.getLogger(RequestHandler.class.getName()).log(Level.SEVERE, null, ex);
-
+                closeConnection();
             }
         }
     }
@@ -122,4 +126,21 @@ public class RequestHandler extends Thread {
         }
     }
 
+    private void closeConnection() {
+        try {
+            if (inputStream != null) {
+                inputStream.close();
+            }
+            if (bufferedReader != null) {
+                bufferedReader.close();
+            }
+            if (printStream != null) {
+                printStream.close();
+            }
+            RequestHandler.clients.remove(this);
+
+        } catch (IOException ex1) {
+            Logger.getLogger(RequestHandler.class.getName()).log(Level.SEVERE, null, ex1);
+        }
+    }
 }

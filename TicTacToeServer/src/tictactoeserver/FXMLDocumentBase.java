@@ -137,19 +137,30 @@ public class FXMLDocumentBase extends AnchorPane {
                     new Thread() {
                         @Override
                         public void run() {
-
                             while (true) {
                                 try {
                                     client = serverSocket.accept();
                                     new RequestHandler(client);
                                 } catch (IOException ex) {
-                                    Logger.getLogger(FXMLDocumentBase.class.getName()).log(Level.SEVERE, null, ex);
+                                    try {
+                                        if (client != null) {
+                                            client.close();
+                                        }
+                                    } catch (IOException ex1) {
+                                        Logger.getLogger(FXMLDocumentBase.class.getName()).log(Level.SEVERE, null, ex1);
+                                    }
                                 }
                             }
                         }
                     }.start();
                 } catch (IOException ex) {
-                    Logger.getLogger(FXMLDocumentBase.class.getName()).log(Level.SEVERE, null, ex);
+                    try {
+                        if (serverSocket != null) {
+                            serverSocket.close();
+                        }
+                    } catch (IOException ex1) {
+                        Logger.getLogger(FXMLDocumentBase.class.getName()).log(Level.SEVERE, null, ex1);
+                    }
                 }
 
             }
