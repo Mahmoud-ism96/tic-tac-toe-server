@@ -60,7 +60,7 @@ public final class DataAccessLayer {
     }
 
     public JsonObject getPlayerByID(String userName, String password) throws SQLException {
-        boolean result;
+        boolean result = false;
         JsonObject playerData = new JsonObject();
         PreparedStatement preStatement = databaseConnection.prepareStatement("SELECT * FROM Player WHERE user_id = ? AND password = ?");
         preStatement.setString(1, userName);
