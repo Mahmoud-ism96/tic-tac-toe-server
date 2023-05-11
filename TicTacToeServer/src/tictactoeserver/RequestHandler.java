@@ -22,6 +22,8 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -37,6 +39,7 @@ public class RequestHandler extends Thread {
     private BufferedReader bufferedReader;
     private String clientName;
     static Vector<RequestHandler> clients = new Vector<RequestHandler>();
+    private Player player;
 
     public RequestHandler(Socket newClientSocket) {
         try {
@@ -44,7 +47,18 @@ public class RequestHandler extends Thread {
             bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
             printStream = new PrintStream(newClientSocket.getOutputStream());
             clientName = newClientSocket.getInetAddress().toString();
-            RequestHandler.clients.add(this);
+            for (RequestHandler client : RequestHandler.clients) {
+                if (client.player != null && client.player.equals(player)) {
+                    client.closeConnection();
+                    RequestHandler.clients.remove(client);
+                    break;
+                }
+            }
+
+            if (!RequestHandler.clients.contains(this)) {
+                RequestHandler.clients.add(this);
+            }
+
             start();
         } catch (IOException ex) {
             Logger.getLogger(RequestHandler.class.getName()).log(Level.SEVERE, null, ex);
@@ -89,8 +103,34 @@ public class RequestHandler extends Thread {
             case "SIGNUP": {
                 signUpRequest(jsonObject);
             }
+            break;
+            case "ONLINEPLAYERLIST": {
+                OnlinePlayersList();
+            }
+            break;
+
         }
 
+    }
+
+    private void OnlinePlayersList() throws SQLException {
+        List<Player> players = new ArrayList<>();
+        for (RequestHandler client : clients) {
+            Player player = client.player;
+            if (player != null && !players.contains(player)) {
+                players.add(player);
+            }
+        }
+
+        JsonObject responseList = new JsonObject();
+        JsonObject onlinePlayersJson = new JsonObject();
+        JsonObject request = new JsonObject();
+
+        request.addProperty("request", "ONLINEPLAYERLIST");
+        onlinePlayersJson.add("players", new Gson().toJsonTree(players));
+        responseList.add("request", request);
+        responseList.add("data", onlinePlayersJson);
+        sendResponseToClient(responseList);
     }
 
     private void signInRequest(JsonObject jsonObject) throws SQLException {
@@ -101,6 +141,20 @@ public class RequestHandler extends Thread {
 
         JsonObject response = DataAccessLayer.getInstance().getPlayerByID(userName, password);
 
+        JsonObject responseObject = response.get("response").getAsJsonObject();
+        String responsestate = responseObject.get("response").getAsString();
+        System.out.println(responseObject);
+        if (responsestate.equals("success")) {
+            JsonElement responseDataElement = response.get("data").getAsJsonObject();
+            System.out.println(responseDataElement);
+            JsonObject responseDataObject = responseDataElement.getAsJsonObject();
+            System.out.println(responseDataObject);
+            String user_id = responseDataObject.get("userId").getAsString();
+            String display_name = responseDataObject.get("displayName").getAsString();
+            int score = responseDataObject.get("totalScore").getAsInt();
+
+            player = new Player(user_id, display_name, score);
+        }
         sendResponseToClient(response);
         System.out.println("User exists in the database");
     }
@@ -113,9 +167,20 @@ public class RequestHandler extends Thread {
         String password = signUpObject.get("password").getAsString();
 
         JsonObject response = DataAccessLayer.getInstance().insert(userName, displayname, password);
+        JsonObject responseObject = response.get("response").getAsJsonObject();
+        String responsestate = responseObject.get("response").getAsString();
+
+        if (responsestate.equals("success")) {
+            JsonElement responseDataElement = response.get("data").getAsJsonObject();
+            JsonObject responseDataObject = responseDataElement.getAsJsonObject();
+            String user_id = responseDataObject.get("userId").getAsString();
+            String display_name = responseDataObject.get("displayName").getAsString();
+            int score = responseDataObject.get("totalScore").getAsInt();
+
+            player = new Player(user_id, display_name, score);
+        }
 
         sendResponseToClient(response);
-        System.out.println("User exists in the database");
     }
 
     private void sendResponseToClient(JsonObject message) {
