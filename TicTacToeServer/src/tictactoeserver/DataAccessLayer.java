@@ -91,7 +91,7 @@ public final class DataAccessLayer {
         if (result) {
             responseData.addProperty("response", "success");
             signInObject.addProperty("displayName", rSet.getString(2));
-            signInObject.addProperty("totalScore", rSet.getInt(5));
+            signInObject.addProperty("totalScore", rSet.getInt(4));
             signInObject.addProperty("userId", userName);
             playerData.add("data", signInObject);
         } else {
