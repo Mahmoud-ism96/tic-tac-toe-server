@@ -12,7 +12,7 @@ package tictactoeserver;
 public class Player {
     protected String user_id;
     protected String display_name;
-    protected boolean status;
+    protected boolean isPlaying;
     protected int score;
 
     public int getScore() {
@@ -31,7 +31,7 @@ public class Player {
         this.user_id = user_id;
         this.display_name = display_name;
         this.score = score;
-        this.status = false;
+        this.isPlaying = false;
     }
     
     
@@ -53,11 +53,11 @@ public class Player {
     }
 
     public boolean getStatus() {
-        return status;
+        return isPlaying;
     }
 
     public void setStatus(boolean status) {
-        this.status = status;
+        this.isPlaying = status;
     }
 
     public String getGame_moves() {

@@ -1,18 +1,12 @@
 package tictactoeserver;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Vector;
+import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.chart.StackedBarChart;
@@ -36,14 +30,14 @@ public class FXMLDocumentBase extends AnchorPane {
     protected ImageView view;
     protected Image img;
     protected Image img_background;
+    protected Thread refreshThread;
+    public static boolean isRunning;
     XYChart.Series series1;
     XYChart.Series series2;
     XYChart.Series series3;
 
-    ServerSocket serverSocket;
-    protected Socket client;
-    DataInputStream dis;
-    PrintStream ps;
+    public static ServerSocket serverSocket;
+    public static Socket client;
 
     public FXMLDocumentBase() {
 
@@ -53,6 +47,7 @@ public class FXMLDocumentBase extends AnchorPane {
         numberAxis = new NumberAxis();
         barChart = new StackedBarChart(categoryAxis, numberAxis);
         txt_off = new Text();
+        isRunning = false;
 
         img_background = new Image("/images/background.jpg");
 
@@ -102,15 +97,12 @@ public class FXMLDocumentBase extends AnchorPane {
 
         series1 = new XYChart.Series();
         series1.setName("Users");
-        series1.getData().add(new XYChart.Data("Users", 100));
 
         series2 = new XYChart.Series();
         series2.setName("Online");
-        series2.getData().add(new XYChart.Data("offline", 50));
 
         series3 = new XYChart.Series();
         series3.setName("Offline");
-        series3.getData().add(new XYChart.Data("online", 50));
 
         barChart.getData().addAll(series1, series2, series3);
         barChart.setVisible(false);
@@ -137,24 +129,30 @@ public class FXMLDocumentBase extends AnchorPane {
                     new Thread() {
                         @Override
                         public void run() {
-                            while (true) {
-                                try {
+                            try {
+                                while (true) {
                                     client = serverSocket.accept();
                                     new RequestHandler(client);
-                                } catch (IOException ex) {
-                                    try {
-                                        if (client != null) {
-                                            client.close();
-                                        }
-                                    } catch (IOException ex1) {
-                                        Logger.getLogger(FXMLDocumentBase.class.getName()).log(Level.SEVERE, null, ex1);
+                                }
+                            } catch (IOException ex) {
+                                try {
+                                    if (client != null) {
+                                        client.close();
                                     }
+                                    if (serverSocket != null) {
+                                        serverSocket.close();
+                                    }
+                                } catch (IOException ex1) {
+                                    Logger.getLogger(FXMLDocumentBase.class.getName()).log(Level.SEVERE, null, ex1);
                                 }
                             }
                         }
                     }.start();
                 } catch (IOException ex) {
                     try {
+                        if (client != null) {
+                            client.close();
+                        }
                         if (serverSocket != null) {
                             serverSocket.close();
                         }
@@ -176,7 +174,8 @@ public class FXMLDocumentBase extends AnchorPane {
             toggle_btn.setGraphic(view);
             txt_off.setVisible(false);
             barChart.setVisible(true);
-
+            isRunning = true;
+            refresh();
         } else {
             img = new Image("/images/off.png");
             view = new ImageView(img);
@@ -185,7 +184,42 @@ public class FXMLDocumentBase extends AnchorPane {
             toggle_btn.setGraphic(view);
             txt_off.setVisible(true);
             barChart.setVisible(false);
+            isRunning = false;
+            if (refreshThread != null) {
+                refreshThread.interrupt();
+            }
         }
     }
 
+    public void refresh() {
+        refreshThread = new Thread(() -> {
+            while (isRunning) {
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+                Platform.runLater(() -> {
+                    try {
+
+                        int all = DataAccessLayer.getInstance().getAllplayerList();
+                        int online = RequestHandler.countOnline();
+                        int offline = all - online;
+                        series1.getData().clear();
+                        series2.getData().clear();
+                        series3.getData().clear();
+                        barChart.getData().clear();
+                        series1.getData().add(new XYChart.Data("Users", all));
+                        series2.getData().add(new XYChart.Data("Online", online));
+                        series3.getData().add(new XYChart.Data("Offline", offline));
+                        barChart.getData().addAll(series1, series2, series3);
+                    } catch (SQLException ex) {
+                        Logger.getLogger(FXMLDocumentBase.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                });
+            }
+        });
+        refreshThread.start();
+    }
 }
